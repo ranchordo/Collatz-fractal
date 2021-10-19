@@ -1,0 +1,118 @@
+#version 430 core
+
+#define PI 3.1415926536
+
+#extension GL_NV_gpu_shader_fp64 : enable
+#extension GL_NV_gpu_shader5 : enable
+
+//#pragma optionNV(fastmath off)
+//#pragma optionNV(fastprecision off)
+
+#define INVLN2 1.44269504088896340736LF
+
+#define trighyp_iterations 10
+
+layout(local_size_x = 1, local_size_y = 1) in;
+layout(rgba32f, binding = 0, location = 0) uniform image2D img_output;
+
+precision highp float;
+
+uniform vec3 invocation_dimensions=vec3(0);
+uniform vec4 dims;
+uniform float magthshld;
+uniform float maxIter;
+
+float64_t sin_d(float64_t x) {
+	//minimax coefs for sin for 0..pi/2 range
+    const double a3 = -1.666666660646699151540776973346659104119e-1LF;
+    const double a5 =  8.333330495671426021718370503012583606364e-3LF;
+    const double a7 = -1.984080403919620610590106573736892971297e-4LF;
+    const double a9 =  2.752261885409148183683678902130857814965e-6LF;
+    const double ab = -2.384669400943475552559273983214582409441e-8LF;
+
+    const double m_2_pi = 0.636619772367581343076LF;
+    const double m_pi_2 = 1.57079632679489661923LF;
+
+    double y = abs(x * m_2_pi);
+    double q = floor(y);
+    int quadrant = int(q);
+
+    double t = (quadrant & 1) != 0 ? 1 - y + q : y - q;
+    t *= m_pi_2;
+
+    double t2 = t * t;
+    double r = fma(fma(fma(fma(fma(ab, t2, a9), t2, a7), t2, a5), t2, a3),
+        t2*t, t);
+
+    r = x < 0 ? -r : r;
+
+    return (quadrant & 2) != 0 ? -r : r;
+}
+const double exp2_coeffs[]={0.9999999999944991,0.6931471805469256,0.24022650715864927,0.055504109007957755,0.009618127623254627,
+		0.001333353454382696,0.0001540393090037287,1.5258869217336253e-05,1.3171164934946571e-06,9.511777064028169e-08,
+		8.795852890588739e-09,3.0057140351740837e-09}; //Collapsed Chebyshev polynomial expansion of 2^x coefficients to n=11, over interval [-1,1]
+float64_t exp2_d_frac(float64_t x) {
+	float64_t ret=0;
+	float64_t p=1;
+	for(int i=0;i<trighyp_iterations;i++) {
+		ret+=exp2_coeffs[i]*p;
+		p*=x;
+	}
+	return ret;
+}
+float64_t exp_d(float64_t x) {
+	x=x*INVLN2; //INVLN2 is precomputed 1/ln(2)
+	float64_t fpart=fract(x);
+	float64_t ipart=x-fpart;
+	float64_t i=float64_t(1<<uint(abs(ipart)));
+	bool inv=ipart<0;
+	i=((1.LF/i)*int(inv))+(i*int(!inv));
+	return i*exp2_d_frac(fpart);
+}
+float64_t cos_d(float64_t x) {
+	return sin_d(x + 1.57079632679489661923LF);
+}
+
+float64_t cosh_d(float64_t x) {
+	return 0.5LF*(exp_d(x)+exp_d(-x));
+}
+float64_t sinh_d(float64_t x) {
+	return 0.5LF*(exp_d(x)-exp_d(-x));
+}
+
+f64vec2 complexCos(f64vec2 c) {
+	return f64vec2(cos_d(c.x)*cosh_d(c.y),-(sin_d(c.x)*sinh_d(c.y)));
+}
+
+f64vec2 Cmod2(f64vec2 c) {
+	return 0.5*(f64vec2(1,0)-complexCos(c*PI));
+}
+
+f64vec2 cmult(f64vec2 a, f64vec2 b) {
+	return f64vec2(a.x*b.x-a.y*b.y,a.x*b.y+a.y*b.x);
+}
+
+#define mo 1000000000
+
+void main() {
+	ivec2 pixel_coords=ivec2(gl_GlobalInvocationID.xy);
+	f64vec2 c=f64vec2(gl_GlobalInvocationID.xy/invocation_dimensions.xy);
+	c.y=1-c.y;
+	c=c*f64vec2(dims.y-dims.x,dims.w-dims.z)+dims.xz;
+	
+	float val=0;
+	
+	for(int i=0;i<int(maxIter);i++) {
+		float64_t l=length(c);
+		bool incr=(l>=magthshld)&&(l<mo);
+		
+		c=(int(incr)*(cmult((2.5*c + f64vec2(1,0)),Cmod2(c)) - 0.5*c)) + c; //Yes
+		
+		val+=int(incr)*(1.0/maxIter);
+	}
+	
+	bool high=(val>=maxIter-(1e-6));
+	val*=int(!high);
+	
+	imageStore(img_output,pixel_coords,vec4(val,val,val,1));
+}
