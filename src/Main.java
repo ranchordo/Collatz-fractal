@@ -18,6 +18,9 @@ import lepton.util.InputHandler;
 import lepton.util.advancedLogger.Logger;
 
 public class Main {
+	
+	public static final boolean PRECISE=false; //Use double precision in the shader to enable more zooming. Makes it run *a ton* slower. NOT FOR OLDER CARDS!!!
+	
 	public static float window=4f;
 	public static float xoff=0;
 	public static float yoff=0;
@@ -41,7 +44,7 @@ public class Main {
 		Logger.setCleanupTask(()->CleanupTasks.cleanUp());
 		CleanupTasks.add(()->GLContextInitializer.destroyGLContext());
 		GLContextInitializer.initializeGLContext(true,750,750,false,"Collatz fractal");
-		ComputeShader iter=new ComputeShader("iterate_precise");
+		ComputeShader iter=new ComputeShader(PRECISE?"iterate_precise":"iterate");
 		Shader screen_basic=new Shader("screen_basic");
 		Screen screen=new Screen();
 		FrameBuffer output=new FrameBuffer(0,1,GL_RGBA32F);
