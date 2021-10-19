@@ -8,12 +8,12 @@ While many have expanded the Collatz conjecture to the complex plane and generat
 
 These extensions to the complex or real numbers involve eliminating the "branches" in the iteration process using something like modulo 2 to determine whether a number is even or odd in a "branchless" fasion. An iteration is then computed as:
 
-$(n\ \text{mod}\ 2)\biggl(\frac{5x}{2}+1\biggr) + \frac{x}{2}$
+<img src="https://rawgit.com/ranchordo/Collatz-fractal/main/svgs/a860a991c97e81e0b23dfd28cfb690cb.svg?invert_in_darkmode" align=middle width=173.31903764999998pt height=47.6716218pt/>
 
 Instead of using the mod function for this purpose, as it is discontinuous, we can use any function that is 0 for even integers and 1 for odd integers without disrupting the original Collatz conjecture under this branchless iteration expression. For this reason, we use the function:
 
-$\frac{1-\cos(\pi x)}{2}$
+<img src="https://rawgit.com/ranchordo/Collatz-fractal/main/svgs/f8a21403d0cbd95f4a1d1b1b4e4b24d6.svg?invert_in_darkmode" align=middle width=60.260045999999996pt height=33.20539859999999pt/>
 
 Which results in a nice sine wave alternating between 0 and 1. With this, our full iteration expression becomes:
 
-$\frac{1-\cos(\pi x)}{2} \biggl(\frac{5x}{2}+1\biggr) + \frac{x}{2}$
+<img src="https://rawgit.com/ranchordo/Collatz-fractal/main/svgs/4ebf0e3754aa9a0d5f4a641cceb180b1.svg?invert_in_darkmode" align=middle width=162.21425549999998pt height=47.6716218pt/>
