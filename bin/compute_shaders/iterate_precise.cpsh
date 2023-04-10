@@ -3,7 +3,12 @@
 #define PI 3.1415926536
 
 #extension GL_NV_gpu_shader_fp64 : enable
-#extension GL_NV_gpu_shader5 : enable
+//#extension GL_NV_gpu_shader5 : enable
+
+
+layout (std140) buffer window {
+	f64vec4 dims;
+};
 
 //#pragma optionNV(fastmath off)
 //#pragma optionNV(fastprecision off)
@@ -18,7 +23,6 @@ layout(rgba32f, binding = 0, location = 0) uniform image2D img_output;
 precision highp float;
 
 uniform vec3 invocation_dimensions=vec3(0);
-uniform vec4 dims;
 uniform float magthshld;
 uniform float maxIter;
 
@@ -73,15 +77,16 @@ float64_t cos_d(float64_t x) {
 	return sin_d(x + 1.57079632679489661923LF);
 }
 
-float64_t cosh_d(float64_t x) {
-	return 0.5LF*(exp_d(x)+exp_d(-x));
+float64_t cosh_d(float64_t x, float64_t expx) {
+	return 0.5LF*(expx+(1.0LF/expx));
 }
-float64_t sinh_d(float64_t x) {
-	return 0.5LF*(exp_d(x)-exp_d(-x));
+float64_t sinh_d(float64_t x, float64_t expx) {
+	return 0.5LF*(expx-(1.0LF/expx));
 }
 
 f64vec2 complexCos(f64vec2 c) {
-	return f64vec2(cos_d(c.x)*cosh_d(c.y),-(sin_d(c.x)*sinh_d(c.y)));
+	float64_t expy=exp_d(c.y);
+	return f64vec2(cos_d(c.x)*cosh_d(c.y,expy),-(sin_d(c.x)*sinh_d(c.y,expy)));
 }
 
 f64vec2 Cmod2(f64vec2 c) {

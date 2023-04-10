@@ -40,6 +40,7 @@ void main() {
 		
 		val+=int(incr)*(1.0/maxIter);
 	}
-	
+	val=clamp(val,0,1);
+	val=(2*val)/(val+1);
 	imageStore(img_output,pixel_coords,vec4(val,val,val,1));
 }
